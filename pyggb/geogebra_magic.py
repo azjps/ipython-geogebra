@@ -2,13 +2,14 @@
 An IPython extension for embedding GeoGebra applets within
 an IPython notebook. Refer to examples directory for usage examples.
 """
-import xml
 
 from IPython.core.magic import (
     magics_class, line_cell_magic, Magics)
 from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring)
 from IPython.display import display, HTML, Javascript
+
+# import applet
 
 def ggb_applet_params(ggb_ipython_magic):
     """Arguments common for GeoGebra applets (including
