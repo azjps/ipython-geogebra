@@ -9,36 +9,18 @@ from IPython.core.magic_arguments import (
     argument, magic_arguments, parse_argstring)
 from IPython.display import display, HTML, Javascript
 
-# import applet
+# TODO: setup.py, python modules
+import applet
 
-def ggb_applet_params(ggb_ipython_magic):
-    """Arguments common for GeoGebra applets (including
-    Java applets, HTML5 applets, etc).
-    """
-    
-    @argument(
-        '-w', '--width', type=int, default=1000,
-        help="Width of applet, in pixels")
-    @argument(
-        '-h', '--height', type=int, default=600,
-        help="Height of applet, in pixels")
-    @argument(
-        '--right_click', type=int,
-        help="Whether to enable right clicks")
-    @argument(
-        '--menu_bar', type=int,
-        help="Whether to show the menu bar")
-    @argument(
-        '--tool_bar', type=int,
-        help="Whether to show the tool bar")
-    @argument(
-        '--algebra_input', type=int,
-        help="Whether to show the algebra input")
-    def wrapped_magic(self, line, cell=None):
-        # TODO: so many more arguments
-        return ggb_ipython_magic(self, line, cell)
-    return wrapped_magic
-
+def _consume_arg(args_dict, key):
+    """Helper"""
+    try:
+        val = args_dict[key]
+        del args_dict[key]
+        return val
+    except KeyError:
+        return None
+                
 @magics_class
 class GeogebraMagic(Magics):
     """
@@ -53,9 +35,10 @@ class GeogebraMagic(Magics):
     notebook, at least in Windows 8.1 and Chrome.
     """
     
-    def __init__(self, shell, cache_display_data=False):
+    def __init__(self, shell, cache_display_data=True):
         super(GeogebraMagic, self).__init__(shell)
         self.cache_display_data = cache_display_data
+        self.cache_applets = {}
         self.ggb_webstart_version = "4.2"
         self.ggb_id = 1  # counter for applet id
 
@@ -67,7 +50,7 @@ class GeogebraMagic(Magics):
     @argument(
         '--id', action="store",
         help="HTML id for applet, for document.getElementById")
-    @ggb_applet_params
+    @applet.JavaApplet.param_arguments
     @line_cell_magic
     def ggb(self, line, cell=None):
         """Display a GeoGebra java applet from a .ggb file.
@@ -79,9 +62,20 @@ class GeogebraMagic(Magics):
         TODO: lots of parameters to add
         TODO: cell read as geogebra commands
         """
-        args = parse_argstring(self.ggb, line)
+        args = parse_argstring(self.ggb, line).__dict__
+        js_id = _consume_arg(args, "id")
+        if js_id is None:
+            if self.cache_applets:
+                js_id = max(self.cache_applets.keys()) + 1
+            else:
+                js_id = 1
+        filename = _consume_arg(args, "ggb_file")
+        java_applet = applet.JavaApplet(js_id, filename, args)
+        self.cache_applets[js_id] = java_applet
+        return HTML(data=str(java_applet))
         
-        # TODO: use xml module
+        # Ignore everything below this line
+        
         # TODO: offer option to convert to b64 format at any point during
         # construction.
         ggb_applet="""
@@ -90,12 +84,13 @@ codebase="http://www.geogebra.org/webstart/4.2/unsigned/"
 archive="http://www.geogebra.org/webstart/4.2/geogebra.jar"
 width="{width}" height="{height}">
 <param name="filename" value="{ggb_file}"/>
-<param name="framePossible" value="false" />
 <param name="image" value="http://www.geogebra.org/webstart/loading.gif" />
-<param name="boxborder" value="false" />
-<param name="centerimage" value="true" />
 <param name="java_arguments" value="-Xmx512m -Djnlp.packEnabled=true" />
 <param name="framePossible" value="false" />
+
+<param name="boxborder" value="false" />
+<param name="centerimage" value="true" />
+
 <param name="showResetIcon" value="true" />
 <param name="showAnimationButton" value="true" />
 <param name="enableRightClick" value="true" />
@@ -119,6 +114,7 @@ href="http://java.sun.com/getjava">click here to install Java now</a>)
 """
         # TODO: read commands from cell and apply
         # TODO: cache output data
+        print(ggb_applet)
         return HTML(ggb_applet)        
 
 def load_ipython_extension(ipython):
