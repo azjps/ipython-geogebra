@@ -3,6 +3,8 @@ An IPython extension for embedding GeoGebra applets within
 an IPython notebook. Refer to examples directory for usage examples.
 """
 
+import functools
+
 from IPython.core.magic import (
     magics_class, line_cell_magic, Magics)
 from IPython.core.magic_arguments import (
@@ -69,54 +71,61 @@ class GeogebraMagic(Magics):
                 js_id = max(self.cache_applets.keys()) + 1
             else:
                 js_id = 1
-        filename = _consume_arg(args, "ggb_file")
-        java_applet = applet.JavaApplet(js_id, filename, args)
+        java_applet = applet.JavaApplet(js_id,
+                                        _consume_arg(args, "ggb_file"),
+                                        _consume_arg(args, "width"),
+                                        _consume_arg(args, "height"),
+                                        args)
         self.cache_applets[js_id] = java_applet
         return HTML(data=str(java_applet))
-        
-        # Ignore everything below this line
-        
-        # TODO: offer option to convert to b64 format at any point during
-        # construction.
-        ggb_applet="""
-<applet code="geogebra.GeoGebraApplet" id="ggb_applet{id}"
-codebase="http://www.geogebra.org/webstart/4.2/unsigned/"
-archive="http://www.geogebra.org/webstart/4.2/geogebra.jar"
-width="{width}" height="{height}">
-<param name="filename" value="{ggb_file}"/>
-<param name="image" value="http://www.geogebra.org/webstart/loading.gif" />
-<param name="java_arguments" value="-Xmx512m -Djnlp.packEnabled=true" />
-<param name="framePossible" value="false" />
-
-<param name="boxborder" value="false" />
-<param name="centerimage" value="true" />
-
-<param name="showResetIcon" value="true" />
-<param name="showAnimationButton" value="true" />
-<param name="enableRightClick" value="true" />
-<param name="errorDialogsActive" value="true" />
-<param name="enableLabelDrags" value="true" />
-<param name="showMenuBar" value="false" />
-<param name="showToolBar" value="false" />
-<param name="showToolBarHelp" value="true" />
-<param name="showAlgebraInput" value="true" />
-<param name="allowRescaling" value="true" />
-Sorry, the GeoGebra Applet could not be started. Please make sure that
-Java 1.4.2 (or later) is installed and activated. (<a
-href="http://java.sun.com/getjava">click here to install Java now</a>)
-</applet>
-""".format(id=self.ggb_id, width=args.width, height=args.height, ggb_file=args.ggb_file)
-        self.ggb_id += 1
-        # Other parameters?
+    
+    # @classmethod
+    def _html5iframe_args(ggb_ipython_magic):
+        """Arguments common for GeoGebra applets (including
+        Java applets, HTML5 applets, etc).
         """
-<param name="cache_archive" value="geogebra.jar, geogebra_main.jar, geogebra_gui.jar, geogebra_cas.jar, geogebra_export.jar, geogebra_properties.jar" />
-<param name="cache_version" value="3.2.47.0, 3.2.47.0, 3.2.47.0, 3.2.47.0, 3.2.47.0, 3.2.47.0" />
-"""
-        # TODO: read commands from cell and apply
-        # TODO: cache output data
-        print(ggb_applet)
-        return HTML(ggb_applet)        
-
+    
+        @functools.wraps(ggb_ipython_magic)
+        @argument(
+            '--width', type=int, default=1000,
+            help="Width of applet, in pixels")
+        @argument(
+            '--height', type=int, default=600,
+            help="Height of applet, in pixels")
+        def wrapped_magic(self, line, cell=None):
+            return ggb_ipython_magic(self, line, cell)
+        for long_arg, short_arg, help in applet.HTML5IFrame.bool_params:
+            wrapped_magic = argument('--' + long_arg, '--' + short_arg,
+                                     metavar='0/1', type=int, help=help)(wrapped_magic)
+        
+        return wrapped_magic
+    
+    @magic_arguments()
+    @argument(
+        'ggbtube_id', action="store",
+        help="Id of geogebra tube"
+        )
+    @argument(
+        '--id', action="store",
+        help="HTML id for applet, for document.getElementById")
+    @_html5iframe_args
+    @line_cell_magic
+    def ggbtube(self, line, cell=None):
+        args = parse_argstring(self.ggbtube, line).__dict__
+        js_id = _consume_arg(args, "id")
+        if js_id is None:
+            if self.cache_applets:
+                js_id = max(self.cache_applets.keys()) + 1
+            else:
+                js_id = 1
+        html5_applet = applet.HTML5IFrame(js_id,
+                                          _consume_arg(args, "ggbtube_id"),
+                                          _consume_arg(args, "width"),
+                                          _consume_arg(args, "height"),
+                                          args)
+        self.cache_applets[js_id] = html5_applet
+        return HTML(data=str(html5_applet))
+        
 def load_ipython_extension(ipython):
     # TODO: use unsigned applet loading:
     # http://www.geogebra.org/en/wiki/index.php/Unsigned_GeoGebra_Applets

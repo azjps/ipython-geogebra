@@ -50,7 +50,7 @@ class JavaApplet(object):
 Please make sure that Java 1.4.2 (or later) is installed and activated.
 (<a href="http://java.sun.com/getjava">Click here to install Java now</a>)"""
     
-    def __init__(self, js_id, filename, applet_params):
+    def __init__(self, js_id, filename, width, height, applet_params):
         """Constructor should at very least pass id and filename,
         outside class will want to be able to introspect.
         """
@@ -58,8 +58,8 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
         self.webstart_version = "4.2"
         self.id = js_id
         self.filename = filename
-        self.width = applet_params['width']
-        self.height = applet_params['height']
+        self.width = width
+        self.height = height
         self.applet_params = applet_params
         self.load_html(self.applet_params)
         
@@ -101,6 +101,7 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
     
     @classmethod
     def param_arguments(cls, ggb_ipython_magic):
+        # TODO: everything referring to ipython should be removed from this file
         """Arguments common for GeoGebra applets (including
         Java applets, HTML5 applets, etc).
         """
@@ -124,5 +125,49 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
           
 class HTML5IFrame(object):
     """"""
-    def __init__(self):
-        pass
+    bool_params = [
+        ("enableRightClick", "rc", "Enable right click and zooming"),
+        ("showInputBar", "ai", "Show input bar"),
+        ("enableShiftDragZoom", "sdz", "Enable shift-to-drag and zoom"),
+        ("showMenuBar", "smb", "Show menu bar"),
+        ("showToolBar", "stb", "Show tool bar"),
+        ("showToolBarHelp", "stbh", "Show tool bar help"),
+        ("enableLabelDrags", "ld", "Allow labels to be draggable"),
+        ("showResetIcon", "sri", "Display refresh icon to reset at original"
+                                 "applet state")
+        ]
+    
+    def __init__(self, js_id, ggbtube_id, width, height, applet_params):
+        """"""
+        self.applet_type = "preferhtml5"
+        self.js_id = js_id
+        self.ggbtube_id = ggbtube_id
+        self.width = str(width)
+        self.height = str(height)
+        self.applet_params = applet_params
+        self.load_html(applet_params)
+        
+    def load_html(self, applet_params):
+        base_ggbtube_url = "http://www.geogebratube.org/material/iframe"
+        self.ggbtube_url = \
+            "{base_url}/id/{id}/width/{width}/height/{height}" \
+            "/border/888888/at/{applet_type}".format(
+                base_url=base_ggbtube_url, id=self.ggbtube_id,
+                width=self.width, height=self.height,
+                applet_type=self.applet_type)
+        for long_arg, short_arg, _ in HTML5IFrame.bool_params:
+            if long_arg in applet_params and applet_params[long_arg] is not None:
+                self.ggbtube_url += "/{param}/{value}".format(
+                    param=short_arg,
+                    value="true" if applet_params[long_arg] else "false")
+            
+        self.xml_root = ElementTree.Element("iframe")
+        self.xml_root.attrib = \
+            {"scrolling": "no",
+             "src": self.ggbtube_url,
+             "width": self.width + "px",
+             "height": self.width + "px",
+             "style": "border:0px;"}
+        
+    def __str__(self):
+        return ElementTree.tostring(self.xml_root)
