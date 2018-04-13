@@ -15,28 +15,29 @@ from IPython.display import display, HTML, Javascript
 import applet
 
 def _consume_arg(args_dict, key):
-    """Helper"""
+    """pop() helper"""
+    # TODO: can we just replace with pop()?
     try:
         val = args_dict[key]
         del args_dict[key]
         return val
     except KeyError:
         return None
-                
+
 @magics_class
 class GeogebraMagic(Magics):
     """
     Define a few line/cell IPython magics %ggb, %ggb_tube
     which takes geogebra files and outputs embedded
     applet or HTML5 application.
-    
+
     TODO: write ggb_tube HTML5 applet magic
     see http://wiki.geogebra.org/en/Reference:Applet_Embedding
     deployggb.js: http://wiki.geogebra.org/en/Reference:Applet_Parameters
     For some reason deployggb.js doesn't seem to work well with IPython
     notebook, at least in Windows 8.1 and Chrome.
     """
-    
+
     def __init__(self, shell, cache_display_data=True):
         super(GeogebraMagic, self).__init__(shell)
         self.cache_display_data = cache_display_data
@@ -56,11 +57,11 @@ class GeogebraMagic(Magics):
     @line_cell_magic
     def ggb(self, line, cell=None):
         """Display a GeoGebra java applet from a .ggb file.
-        
+
         To embed an existing GeoGebra file, use the IPython magic:
-        
+
             %ggb filename.ggb
-            
+
         TODO: lots of parameters to add
         TODO: cell read as geogebra commands
         """
@@ -78,13 +79,13 @@ class GeogebraMagic(Magics):
                                         args)
         self.cache_applets[js_id] = java_applet
         return HTML(data=str(java_applet))
-    
+
     # @classmethod
     def _html5iframe_args(ggb_ipython_magic):
         """Arguments common for GeoGebra applets (including
         Java applets, HTML5 applets, etc).
         """
-    
+
         @functools.wraps(ggb_ipython_magic)
         @argument(
             '--width', type=int, default=1000,
@@ -97,9 +98,9 @@ class GeogebraMagic(Magics):
         for long_arg, short_arg, help in applet.HTML5IFrame.bool_params:
             wrapped_magic = argument('--' + long_arg, '--' + short_arg,
                                      metavar='0/1', type=int, help=help)(wrapped_magic)
-        
+
         return wrapped_magic
-    
+
     @magic_arguments()
     @argument(
         'ggbtube_id', action="store",
@@ -125,7 +126,7 @@ class GeogebraMagic(Magics):
                                           args)
         self.cache_applets[js_id] = html5_applet
         return HTML(data=str(html5_applet))
-        
+
 def load_ipython_extension(ipython):
     # TODO: use unsigned applet loading:
     # http://www.geogebra.org/en/wiki/index.php/Unsigned_GeoGebra_Applets
