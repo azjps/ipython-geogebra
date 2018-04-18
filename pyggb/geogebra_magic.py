@@ -12,7 +12,7 @@ from IPython.core.magic_arguments import (
 from IPython.display import display, HTML, Javascript
 
 # TODO: setup.py, python modules
-import applet
+from . import applet
 
 def _consume_arg(args_dict, key):
     """pop() helper"""

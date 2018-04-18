@@ -49,7 +49,7 @@ class JavaApplet(object):
     no_java_text = """Sorry, the GeoGebra Applet could not be started.
 Please make sure that Java 1.4.2 (or later) is installed and activated.
 (<a href="http://java.sun.com/getjava">Click here to install Java now</a>)"""
-    
+
     def __init__(self, js_id, filename, width, height, applet_params):
         """Constructor should at very least pass id and filename,
         outside class will want to be able to introspect.
@@ -62,7 +62,7 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
         self.height = height
         self.applet_params = applet_params
         self.load_html(self.applet_params)
-        
+
     def load_html(self, applet_params):
         self.xml_root = ElementTree.Element("applet")
         self.xml_root.attrib = \
@@ -74,7 +74,7 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
              "archive": self.webstart_url + self.webstart_version + "/geogebra.jar"}
         self.xml_root.text = JavaApplet.no_java_text
         self.append_bool_params(applet_params)
-        
+
         xml_param = ElementTree.SubElement(self.xml_root, "param", attrib=
              {'name': "filename",
               'value': self.filename})
@@ -84,9 +84,9 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
         xml_param = ElementTree.SubElement(self.xml_root, "param", attrib=
              {'name': "image",
               'value': "http://www.geogebra.org/webstart/loading.gif"})
-        
+
         _indent(self.xml_root)
-    
+
     def append_bool_params(self, applet_params):
         """Refer to http://wiki.geogebra.org/en/Reference:Applet_Parameters"""
         for param in JavaApplet.bool_params:
@@ -95,17 +95,17 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
                 xml_param.attrib = \
                     {'name': param,
                      'value': "true" if applet_params[param] else "false"}
-                     
+
     def __str__(self):
-        return ElementTree.tostring(self.xml_root)
-    
+        return ElementTree.tostring(self.xml_root).decode()
+
     @classmethod
     def param_arguments(cls, ggb_ipython_magic):
         # TODO: everything referring to ipython should be removed from this file
         """Arguments common for GeoGebra applets (including
         Java applets, HTML5 applets, etc).
         """
-    
+
         @functools.wraps(ggb_ipython_magic)
         @argument(
             '--width', type=int, default=1000,
@@ -120,9 +120,9 @@ Please make sure that Java 1.4.2 (or later) is installed and activated.
             return ggb_ipython_magic(self, line, cell)
         for param in cls.bool_params:
             wrapped_magic = argument('--' + param, metavar='0/1', type=int, help=param)(wrapped_magic)
-        
+
         return wrapped_magic
-          
+
 class HTML5IFrame(object):
     """"""
     bool_params = [
@@ -136,7 +136,7 @@ class HTML5IFrame(object):
         ("showResetIcon", "sri", "Display refresh icon to reset at original"
                                  "applet state")
         ]
-    
+
     def __init__(self, js_id, ggbtube_id, width, height, applet_params):
         """"""
         self.applet_type = "preferhtml5"
@@ -146,7 +146,7 @@ class HTML5IFrame(object):
         self.height = str(height)
         self.applet_params = applet_params
         self.load_html(applet_params)
-        
+
     def load_html(self, applet_params):
         base_ggbtube_url = "http://www.geogebratube.org/material/iframe"
         self.ggbtube_url = \
@@ -160,7 +160,7 @@ class HTML5IFrame(object):
                 self.ggbtube_url += "/{param}/{value}".format(
                     param=short_arg,
                     value="true" if applet_params[long_arg] else "false")
-            
+
         self.xml_root = ElementTree.Element("iframe")
         self.xml_root.attrib = \
             {"scrolling": "no",
@@ -168,6 +168,6 @@ class HTML5IFrame(object):
              "width": self.width + "px",
              "height": self.width + "px",
              "style": "border:0px;"}
-        
+
     def __str__(self):
-        return ElementTree.tostring(self.xml_root)
+        return ElementTree.tostring(self.xml_root).decode()
